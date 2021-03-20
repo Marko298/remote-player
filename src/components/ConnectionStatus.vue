@@ -1,7 +1,7 @@
 <template>
   <span
-    class="absolute top-0 left-0 mt-3 ml-3 block h-3 w-3 rounded-full z-10 animate-ping"
-    :class="isConnected ? 'bg-green-400' : 'bg-red-400'"
+    class="absolute top-0 left-0 mt-3 ml-3 block h-3 w-3 rounded-full z-10"
+    :class="isConnected ? 'bg-green-400' : 'bg-red-400 animate-pulse'"
   />
 </template>
 
