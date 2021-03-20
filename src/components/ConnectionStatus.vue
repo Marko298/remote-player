@@ -7,9 +7,13 @@
 
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
+import { WebSocketPlayer } from "@/player/WebSocketPlayer";
+import { Action } from "vuex-class";
 
 @Component({})
 export default class ConnectionStatus extends Vue {
+  @Action("setRemotePlayer") setRemotePlayer;
+
   isConnected = false;
 
   mounted() {
@@ -17,6 +21,8 @@ export default class ConnectionStatus extends Vue {
 
     this.sockets.subscribe("connect", () => {
       this.isConnected = true;
+
+      this.setRemotePlayer(new WebSocketPlayer(this.$socket, this.sockets));
     });
 
     this.sockets.subscribe("disconnect", () => {

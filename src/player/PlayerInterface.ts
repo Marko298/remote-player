@@ -1,4 +1,4 @@
-import { SongMetadata } from "@/store";
+import { Device, SongMetadata } from "@/store";
 
 export interface PlayerInterface {
   readonly currentTime: number;
@@ -16,6 +16,13 @@ export interface PlayerInterface {
   onLoadedMetadata(callback: MetadataCallback);
 }
 
+export interface RemotePlayerInterface extends PlayerInterface {
+  readonly devices: Device[];
+
+  onDevicesChanged(callback: DeviceChangedCallback);
+}
+
 export type VoidCallback = () => void;
 export type ProgressCallback = (currentTime: number) => void;
 export type MetadataCallback = (metadata: SongMetadata) => void;
+export type DeviceChangedCallback = (devices: Device[]) => void;

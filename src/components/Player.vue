@@ -25,6 +25,7 @@ import PlayerInterface from "@/components/PlayerInterface.vue";
 import { Action, Getter, State } from "vuex-class";
 import { Song, SongMetadata } from "@/store";
 import ConnectionStatus from "@/components/ConnectionStatus.vue";
+import { HtmlPlayer } from "@/player/HtmlPlayer";
 
 @Component({
   components: { ConnectionStatus, PlayerInterface },
@@ -43,7 +44,7 @@ export default class Player extends Vue {
   @Action("prevSong") prevSong;
 
   mounted() {
-    this.setLocalPlayer(this.$refs.audio);
+    this.setLocalPlayer(new HtmlPlayer(this.$refs.audio as HTMLAudioElement));
   }
 
   get normalizedDuration() {

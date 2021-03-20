@@ -1,14 +1,18 @@
 import Vue from "vue";
-import Vuex, { GetterTree } from "vuex";
+import Vuex from "vuex";
 import playlist from "@/store/playlist";
-import { PlayerInterface } from "@/player/PlayerInterface";
-import { HtmlPlayer } from "@/player/HtmlPlayer";
+import {
+  PlayerInterface,
+  RemotePlayerInterface,
+} from "@/player/PlayerInterface";
 import { NonePlayer } from "@/player/NonePlayer";
+import { v4 } from "uuid";
+import { myId } from "@/id";
 
 Vue.use(Vuex);
 
 export interface Device {
-  id: number;
+  id: string;
   name: string;
 }
 
@@ -25,40 +29,24 @@ export interface SongMetadata {
 }
 
 export interface State {
-  isConnected: boolean;
   devices: Device[];
   playlist: Song[];
   isPlaying: boolean;
   isReady: boolean;
   lastPlayingState: boolean;
-  activeDeviceId: number;
+  activeDeviceId: string;
   currentSongId: number;
   playedDuration: number;
   localPlayer: PlayerInterface;
+  remotePlayer?: PlayerInterface;
   currentSongMetadata?: SongMetadata;
 }
-
-export interface Getters {
-  activePlayer(state: State): PlayerInterface;
-}
-
-const getters: GetterTree<State, any> & Getters = {
-  currentSong(state) {
-    return state.playlist.find(({ id }) => id === state.currentSongId);
-  },
-  activePlayer(state): PlayerInterface {
-    return state.localPlayer;
-  },
-  currentSongIndex(state, getters): number {
-    return state.playlist.indexOf(getters.currentSong);
-  },
-};
 
 export default new Vuex.Store<State>({
   state: {
     localPlayer: new NonePlayer(),
-    isConnected: false,
-    activeDeviceId: 1,
+    remotePlayer: undefined,
+    activeDeviceId: myId,
     currentSongId: 1,
     currentSongMetadata: undefined,
     lastPlayingState: false,
@@ -66,22 +54,17 @@ export default new Vuex.Store<State>({
     isReady: false,
     playedDuration: 0,
     playlist: playlist,
-    devices: [
-      { id: 1, name: "Mark's Macbook Air" },
-      { id: 2, name: "Mark's Macbook Pro" },
-      { id: 3, name: "Mark's iPhone" },
-      { id: 4, name: "Mark's iPad" },
-    ],
+    devices: [{ id: myId, name: "Current machine" }],
   },
   mutations: {
-    SET_SOCKET_STATE(state, connected: boolean) {
-      state.isConnected = connected;
-    },
-    SET_ACTIVE_DEVICE(state, id: number) {
+    SET_ACTIVE_DEVICE(state, id: string) {
       state.activeDeviceId = id;
     },
     SET_LOCAL_PLAYER(state, player: PlayerInterface) {
       state.localPlayer = player;
+    },
+    SET_REMOTE_PLAYER(state, player: PlayerInterface) {
+      state.remotePlayer = player;
     },
     SET_CURRENT_SONG(state, id: number) {
       state.lastPlayingState = state.isPlaying;
@@ -103,46 +86,78 @@ export default new Vuex.Store<State>({
     SET_LAST_PLAYING_STATE(state, wasPlaying: boolean) {
       state.lastPlayingState = wasPlaying;
     },
+    SET_REMOTE_DEVICES(state, devices: Device[]) {
+      state.devices = [
+        state.devices.find(({ id }) => id === myId)!,
+        ...devices.filter(({ id }) => id !== myId),
+      ];
+    },
   },
   actions: {
-    socket_connect({ commit }, asd) {
-      console.log(asd);
-      commit("SET_SOCKET_STATE", true);
-    },
-
-    socket_disconnect({ commit }) {
-      commit("SET_SOCKET_STATE", false);
-    },
-
     setActiveDevice({ commit }, id: number) {
       commit("SET_ACTIVE_DEVICE", id);
     },
 
-    async setLocalPlayer({ commit, dispatch }, element: HTMLAudioElement) {
-      const player = new HtmlPlayer(element);
-      await dispatch("setActivePlayer", player);
+    async setLocalPlayer({ commit, dispatch }, player: PlayerInterface) {
       commit("SET_LOCAL_PLAYER", player);
     },
 
+    async setRemotePlayer({ commit, dispatch }, player: RemotePlayerInterface) {
+      await dispatch("setActivePlayer", player);
+
+      commit("SET_REMOTE_DEVICES", player.devices);
+
+      player.onDevicesChanged((devices) =>
+        commit("SET_REMOTE_DEVICES", devices)
+      );
+
+      commit("SET_REMOTE_PLAYER", player);
+    },
+
     setActivePlayer({ commit, dispatch }, player: PlayerInterface) {
-      player.onTimeUpdate((time) => {
-        commit("SET_PLAYED_DURATION", time);
-      });
-      player.onPlaying(() => {
-        commit("SET_IS_PLAYING", true);
-      });
-      player.onPause(() => {
-        commit("SET_IS_PLAYING", false);
-      });
-      player.onLoadedMetadata((meta) => {
-        commit("SET_CURRENT_SONG_METADATA", meta);
-      });
-      player.onReady(() => {
-        dispatch("setPlayerReady");
-      });
-      player.onEnded(() => {
-        dispatch("nextSong");
-      });
+      const callbacks = {
+        onTimeUpdate: (time) => {
+          commit("SET_PLAYED_DURATION", time);
+        },
+        onPlaying: () => {
+          commit("SET_IS_PLAYING", true);
+        },
+        onPause: () => {
+          commit("SET_IS_PLAYING", false);
+        },
+        onLoadedMetadata: (meta) => {
+          commit("SET_CURRENT_SONG_METADATA", meta);
+        },
+        onReady: () => {
+          dispatch("setPlayerReady");
+        },
+        onEnded: () => {
+          dispatch("nextSong");
+        },
+      };
+
+      for (const key in callbacks) {
+        player[key](callbacks[key]);
+      }
+
+      // player.onTimeUpdate((time) => {
+      //   commit("SET_PLAYED_DURATION", time);
+      // });
+      // player.onPlaying(() => {
+      //   commit("SET_IS_PLAYING", true);
+      // });
+      // player.onPause(() => {
+      //   commit("SET_IS_PLAYING", false);
+      // });
+      // player.onLoadedMetadata((meta) => {
+      //   commit("SET_CURRENT_SONG_METADATA", meta);
+      // });
+      // player.onReady(() => {
+      //   dispatch("setPlayerReady");
+      // });
+      // player.onEnded(() => {
+      //   dispatch("nextSong");
+      // });
     },
 
     togglePlayback({ getters }) {
@@ -183,6 +198,18 @@ export default new Vuex.Store<State>({
       commit("SET_LAST_PLAYING_STATE", false);
     },
   },
-  getters,
+  getters: {
+    currentSong(state) {
+      return state.playlist.find(({ id }) => id === state.currentSongId);
+    },
+    activePlayer(state): PlayerInterface {
+      return state.activeDeviceId !== myId && state.remotePlayer
+        ? state.remotePlayer
+        : state.localPlayer;
+    },
+    currentSongIndex(state, getters): number {
+      return state.playlist.indexOf(getters.currentSong);
+    },
+  },
   modules: {},
 });
