@@ -20,7 +20,7 @@ export class RemotePlayerController {
   private stateChangeCallback?: StateChangeCallback;
 
   constructor(
-    private state: PlayerState,
+    // private state: PlayerState,
     private socket: Socket,
     private manager: SocketManager
   ) {
@@ -31,8 +31,8 @@ export class RemotePlayerController {
     return new Promise((f) => {
       socket.emit("announce", myId);
 
-      manager.subscribe("registered", (state: PlayerState) => {
-        f(new RemotePlayerController(state, socket, manager));
+      manager.subscribe("registered", () => {
+        f(new RemotePlayerController(socket, manager));
       });
     });
   }
@@ -42,20 +42,23 @@ export class RemotePlayerController {
     fetch && this.socket.emit("fetchState");
   }
 
-  getState(): PlayerState {
-    return this.state;
+  // getState(): PlayerState {
+  //   return this.state;
+  // }
+
+  sendState(state: PlayerState) {
+    this.socket.emit("stateChanged", state);
   }
 
-  setState(state: PlayerState) {
-    this.socket.emit("stateChange", state);
+  switchTo(id) {
+    this.socket.emit("switchMaster", id);
   }
 
-  onCommand(callback?: CommandCallback) {
-    if (callback) {
-      this.manager.subscribe("command", callback);
-    } else {
-      this.manager.unsubscribe("command");
-    }
+  onCommand(callback: CommandCallback) {
+    this.manager.subscribe("command", function ({ command, payload }) {
+      console.log(command, payload);
+      callback(command, payload);
+    });
   }
 
   command(command: RemoteCommand, payload: RemoteCommandPayload = {}) {
@@ -67,7 +70,7 @@ export class RemotePlayerController {
 
   private subscribeToUpdates() {
     this.manager.subscribe("stateChanged", (state: PlayerState) => {
-      this.state = state;
+      // this.state = state;
       this.stateChangeCallback && this.stateChangeCallback(state);
     });
   }
@@ -78,7 +81,9 @@ export class RemotePlayerController {
     fetch && this.socket.emit("fetchDevices");
   }
 
-  onDeviceChange(callback: (device: Device) => void) {
-    this.manager.subscribe("deviceChanged", callback);
+  onDeviceChange(callback: (device?: Device) => void, fetch = true) {
+    this.manager.subscribe("masterChanged", callback);
+
+    fetch && this.socket.emit("fetchMaster");
   }
 }

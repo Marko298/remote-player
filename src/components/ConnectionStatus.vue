@@ -15,17 +15,27 @@ export default class ConnectionStatus extends Vue {
   @Action("remotePlayer/setPlayer") setPlayer;
 
   isConnected = false;
+  playerCreated = false;
+
+  createRemotePlayer() {
+    if (this.playerCreated) {
+      return;
+    }
+
+    RemotePlayerController.prepare(this.$socket, this.sockets).then(
+      (player) => {
+        this.setPlayer(player);
+        this.playerCreated = true;
+      }
+    );
+  }
 
   mounted() {
     this.isConnected = this.$socket.connected;
 
     this.sockets.subscribe("connect", () => {
       this.isConnected = true;
-
-      RemotePlayerController.prepare(
-        this.$socket,
-        this.sockets
-      ).then((player) => this.setPlayer(player));
+      this.createRemotePlayer();
     });
 
     this.sockets.subscribe("disconnect", () => {

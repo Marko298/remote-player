@@ -95,6 +95,7 @@ export default {
     return {
       isRewinding: false,
       rewindPosition: 0,
+      playedOverride: null,
 
       sliderSteps: 1000,
     };
@@ -123,6 +124,12 @@ export default {
     rewind() {
       this.isRewinding = false;
       this.$emit("seek", this.projectedPlayed);
+      this.rememberPosition(this.projectedPlayed);
+    },
+
+    rememberPosition(position) {
+      this.playedOverride = position;
+      setTimeout(() => (this.playedOverride = null), 100);
     },
   },
 
@@ -140,6 +147,10 @@ export default {
       return (this.rewindPosition * this.duration) / this.sliderSteps;
     },
     playedComputed() {
+      if (this.playedOverride) {
+        return this.playedOverride;
+      }
+
       return this.isRewinding ? this.projectedPlayed : this.played;
     },
     durationSeconds() {
@@ -155,7 +166,7 @@ export default {
       return this.playedComputed % 60;
     },
     progress() {
-      return this.duration === 0 ? 0 : this.playedComputed / this.duration;
+      return this.duration !== 0 ? this.playedComputed / this.duration : 0;
     },
   },
 };

@@ -2,37 +2,47 @@ import { Module } from "vuex";
 import { GlobalState } from "@/store/index";
 import { PlayerState } from "@/player/PlayerState";
 
-interface State {
-  controllingRemote: boolean;
-}
-
-export const PlayerControls: Module<State, GlobalState> = {
-  state: {
-    controllingRemote: false,
-  },
+export const PlayerControls: Module<undefined, GlobalState> = {
   getters: {
     playerState(state, getters, rootState, rootGetter): PlayerState {
-      return rootGetter["localPlayer/state"];
+      return getters.isMaster
+        ? rootGetter["localPlayer/state"]
+        : rootGetter["remotePlayer/state"];
+    },
+    isMaster(state, getters, rootState, rootGetter): PlayerState {
+      return rootGetter["remotePlayer/isMaster"];
     },
   },
   actions: {
-    play({ dispatch }) {
-      dispatch("localPlayer/play");
+    play({ dispatch, getters }) {
+      getters.isMaster
+        ? dispatch("localPlayer/play")
+        : dispatch("remotePlayer/play");
     },
-    pause({ dispatch }) {
-      dispatch("localPlayer/pause");
+    pause({ dispatch, getters }) {
+      getters.isMaster
+        ? dispatch("localPlayer/pause")
+        : dispatch("remotePlayer/pause");
     },
-    toggle({ dispatch }) {
-      dispatch("localPlayer/toggle");
+    toggle({ dispatch, getters }) {
+      getters.isMaster
+        ? dispatch("localPlayer/toggle")
+        : dispatch("remotePlayer/toggle");
     },
-    seek({ dispatch }, payload) {
-      dispatch("localPlayer/seek", payload);
+    seek({ dispatch, getters }, payload) {
+      getters.isMaster
+        ? dispatch("localPlayer/seek", payload)
+        : dispatch("remotePlayer/seek", payload);
     },
-    nextSong({ dispatch }) {
-      dispatch("localPlayer/nextSong");
+    nextSong({ dispatch, getters }) {
+      getters.isMaster
+        ? dispatch("localPlayer/nextSong")
+        : dispatch("remotePlayer/nextSong");
     },
-    prevSong({ dispatch }) {
-      dispatch("localPlayer/prevSong");
+    prevSong({ dispatch, getters }) {
+      getters.isMaster
+        ? dispatch("localPlayer/prevSong")
+        : dispatch("remotePlayer/prevSong");
     },
   },
 };

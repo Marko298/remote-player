@@ -70,9 +70,16 @@ export const LocalPlayer: Module<State, GlobalState> = {
       player.onplaying = () => commit("SET_PLAYING", true);
       player.onpause = () => commit("SET_PLAYING", false);
       player.oncanplay = () => dispatch("ready");
-      player.ontimeupdate = (e) => commit("SET_POSITION", e.target.currentTime);
-      player.onloadedmetadata = (e) =>
+      player.onloadedmetadata = (e) => {
         commit("SET_DURATION", e.target.duration);
+      };
+      player.ontimeupdate = (e) => {
+        commit("SET_POSITION", e.target.currentTime);
+
+        if (e.target.currentTime === e.target.duration) {
+          dispatch("ended");
+        }
+      };
 
       commit("SET_PLAYER", player);
     },
@@ -114,6 +121,10 @@ export const LocalPlayer: Module<State, GlobalState> = {
 
     seek({ getters }, { time }: { time: number }) {
       getters.player.currentTime = time;
+    },
+
+    ended({ dispatch }) {
+      dispatch("nextSong");
     },
   },
 };

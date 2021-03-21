@@ -13,6 +13,15 @@ interface State {
 
 const me = { id: myId, name: "Current machine" };
 
+export function remotePlayerPlugin() {
+  return (store) => {
+    store.watch(
+      (state, getters) => getters["localPlayer/state"],
+      () => store.dispatch("remotePlayer/sendLocalState")
+    );
+  };
+}
+
 export const RemotePlayer: Module<State, GlobalState> = {
   namespaced: true,
   state: {
@@ -31,8 +40,8 @@ export const RemotePlayer: Module<State, GlobalState> = {
     SET_REMOTE_DEVICES(state, devices: Device[]) {
       state.devices = [me, ...devices.filter(({ id }) => id !== me.id)];
     },
-    SET_ACTIVE_DEVICE(state, device: Device) {
-      state.activeDeviceId = device.id;
+    SET_ACTIVE_DEVICE(state, deviceId: string) {
+      state.activeDeviceId = deviceId;
     },
   },
   getters: {
@@ -41,6 +50,12 @@ export const RemotePlayer: Module<State, GlobalState> = {
     },
     player(state) {
       return state.player;
+    },
+    state(s): PlayerState | undefined {
+      return s.state;
+    },
+    isMaster(state) {
+      return state.activeDeviceId === myId;
     },
   },
   actions: {
@@ -58,7 +73,11 @@ export const RemotePlayer: Module<State, GlobalState> = {
       });
 
       player.onDeviceChange((device) => {
-        commit("SET_ACTIVE_DEVICE", device);
+        if (device?.id === me.id) {
+          dispatch("sendLocalState");
+        }
+
+        commit("SET_ACTIVE_DEVICE", device?.id ?? me.id);
       });
 
       commit("SET_PLAYER", player);
@@ -83,6 +102,11 @@ export const RemotePlayer: Module<State, GlobalState> = {
     },
     switchToDevice({ getters }, id: string) {
       getters.player.switchTo(id);
+    },
+    sendLocalState({ getters, rootGetters }) {
+      getters.isMaster &&
+        getters.player &&
+        getters.player.sendState(rootGetters["localPlayer/state"]);
     },
   },
 };
