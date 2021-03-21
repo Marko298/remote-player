@@ -1,28 +1,17 @@
-import { Device, SongMetadata } from "@/store";
+import { Device, SongMetadata } from "@/player/PlayerState";
 
-export interface PlayerInterface {
-  readonly currentTime: number;
-  readonly duration: number;
+export interface PlayerControlInterface {
   toggle();
   play();
   pause();
   seekTo(time: number);
-  onTimeUpdate(callback: ProgressCallback);
-  onPlay(callback: ProgressCallback);
-  onPlaying(callback: ProgressCallback);
-  onPause(callback: ProgressCallback);
-  onEnded(callback: VoidCallback);
-  onReady(callback: VoidCallback);
-  onLoadedMetadata(callback: MetadataCallback);
 }
 
-export interface RemotePlayerInterface extends PlayerInterface {
-  readonly devices: Device[];
-
-  onDevicesChanged(callback: DeviceChangedCallback);
+export interface RemotePlayerControlInterface extends PlayerControlInterface {
+  nextSong();
+  prevSong();
 }
 
 export type VoidCallback = () => void;
 export type ProgressCallback = (currentTime: number) => void;
 export type MetadataCallback = (metadata: SongMetadata) => void;
-export type DeviceChangedCallback = (devices: Device[]) => void;

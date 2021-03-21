@@ -1,0 +1,84 @@
+import { Socket } from "socket.io-client";
+import { myId } from "@/id";
+import {
+  CommandCallback,
+  Device,
+  PlayerState,
+  RemoteCommand,
+  RemoteCommandPayload,
+  StateChangeCallback,
+} from "@/player/PlayerState";
+
+export interface SocketManager {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  subscribe(eventName: string, handler: (...args: any[]) => void): void;
+
+  unsubscribe(eventName: string): void;
+}
+
+export class RemotePlayerController {
+  private stateChangeCallback?: StateChangeCallback;
+
+  constructor(
+    private state: PlayerState,
+    private socket: Socket,
+    private manager: SocketManager
+  ) {
+    this.subscribeToUpdates();
+  }
+
+  static async prepare(socket: Socket, manager: SocketManager) {
+    return new Promise((f) => {
+      socket.emit("announce", myId);
+
+      manager.subscribe("registered", (state: PlayerState) => {
+        f(new RemotePlayerController(state, socket, manager));
+      });
+    });
+  }
+
+  onStateChange(callback?: StateChangeCallback, fetch = true) {
+    this.stateChangeCallback = callback;
+    fetch && this.socket.emit("fetchState");
+  }
+
+  getState(): PlayerState {
+    return this.state;
+  }
+
+  setState(state: PlayerState) {
+    this.socket.emit("stateChange", state);
+  }
+
+  onCommand(callback?: CommandCallback) {
+    if (callback) {
+      this.manager.subscribe("command", callback);
+    } else {
+      this.manager.unsubscribe("command");
+    }
+  }
+
+  command(command: RemoteCommand, payload: RemoteCommandPayload = {}) {
+    this.socket.emit("command", {
+      command,
+      payload,
+    });
+  }
+
+  private subscribeToUpdates() {
+    this.manager.subscribe("stateChanged", (state: PlayerState) => {
+      this.state = state;
+      this.stateChangeCallback && this.stateChangeCallback(state);
+    });
+  }
+
+  onDeviceListChange(callback: (devices: Device[]) => void, fetch = true) {
+    this.manager.subscribe("deviceListChanged", callback);
+
+    fetch && this.socket.emit("fetchDevices");
+  }
+
+  onDeviceChange(callback: (device: Device) => void) {
+    this.manager.subscribe("deviceChanged", callback);
+  }
+}

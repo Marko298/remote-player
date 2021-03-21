@@ -7,12 +7,12 @@
 
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
-import { WebSocketPlayer } from "@/player/WebSocketPlayer";
+import { RemotePlayerController } from "@/player/RemotePlayerController";
 import { Action } from "vuex-class";
 
 @Component({})
 export default class ConnectionStatus extends Vue {
-  @Action("setRemotePlayer") setRemotePlayer;
+  @Action("remotePlayer/setPlayer") setPlayer;
 
   isConnected = false;
 
@@ -22,7 +22,10 @@ export default class ConnectionStatus extends Vue {
     this.sockets.subscribe("connect", () => {
       this.isConnected = true;
 
-      this.setRemotePlayer(new WebSocketPlayer(this.$socket, this.sockets));
+      RemotePlayerController.prepare(
+        this.$socket,
+        this.sockets
+      ).then((player) => this.setPlayer(player));
     });
 
     this.sockets.subscribe("disconnect", () => {

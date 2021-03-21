@@ -31,12 +31,12 @@ import { Action, State } from "vuex-class";
   components: { DeviceSelector, Player, ConnectionStatus },
 })
 export default class DeviceSelector extends Vue {
-  @State("devices") devices;
-  @State("activeDeviceId") activeDeviceId;
-  @Action("setActiveDevice") setActiveDevice;
+  @State("remotePlayer/devices") devices;
+  @State("remotePlayer/activeDeviceId") activeDeviceId;
+  @Action("remotePlayer/switchToDevice") switchDevice;
 
   changeDevice(e) {
-    this.setActiveDevice(+e.target.value);
+    this.switchDevice(+e.target.value);
   }
 }
 </script>

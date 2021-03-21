@@ -3,52 +3,40 @@
     <connection-status />
 
     <player-interface
-      :name="currentSong.name"
-      :artist="currentSong.artist"
-      :is-playing="isPlaying"
-      :duration="normalizedDuration"
-      :played="playedDuration"
-      :cover="currentSong.cover"
+      v-if="playerState"
+      :name="playerState.song.name"
+      :artist="playerState.song.artist"
+      :is-playing="playerState.isPlaying"
+      :duration="playerState.duration"
+      :played="playerState.currentPosition"
+      :cover="playerState.song.cover"
       @next="nextSong"
       @prev="prevSong"
-      @seek="seekSong"
-      @toggle="togglePlayback"
+      @toggle="toggle"
+      @seek="seek({ time: $event })"
     />
 
-    <audio hidden :src="currentSong.url" id="audio" ref="audio" />
+    <local-player />
   </div>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
 import PlayerInterface from "@/components/PlayerInterface.vue";
-import { Action, Getter, State } from "vuex-class";
-import { Song, SongMetadata } from "@/store";
 import ConnectionStatus from "@/components/ConnectionStatus.vue";
-import { HtmlPlayer } from "@/player/HtmlPlayer";
+import LocalPlayer from "@/components/LocalPlayer.vue";
+import { PlayerState } from "@/player/PlayerState";
+import { Action, Getter } from "vuex-class";
 
 @Component({
-  components: { ConnectionStatus, PlayerInterface },
+  components: { LocalPlayer, ConnectionStatus, PlayerInterface },
 })
 export default class Player extends Vue {
-  @Getter("currentSong") currentSong?: Song;
+  @Getter("playerState") playerState?: PlayerState;
 
-  @State("isPlaying") isPlaying: boolean;
-  @State("playedDuration") playedDuration: number;
-  @State("currentSongMetadata") currentSongMetadata?: SongMetadata;
-
-  @Action("setLocalPlayer") setLocalPlayer;
-  @Action("togglePlayback") togglePlayback;
-  @Action("seekSong") seekSong;
+  @Action("seek") seek;
+  @Action("toggle") toggle;
   @Action("nextSong") nextSong;
   @Action("prevSong") prevSong;
-
-  mounted() {
-    this.setLocalPlayer(new HtmlPlayer(this.$refs.audio as HTMLAudioElement));
-  }
-
-  get normalizedDuration() {
-    return this.currentSongMetadata?.duration ?? 0;
-  }
 }
 </script>
