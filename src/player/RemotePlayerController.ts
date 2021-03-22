@@ -17,34 +17,27 @@ export interface SocketManager {
 }
 
 export class RemotePlayerController {
-  private stateChangeCallback?: StateChangeCallback;
+  constructor(private socket: Socket, private manager: SocketManager) {}
 
-  constructor(
-    // private state: PlayerState,
-    private socket: Socket,
-    private manager: SocketManager
-  ) {
-    this.subscribeToUpdates();
-  }
-
-  static async prepare(socket: Socket, manager: SocketManager) {
-    return new Promise((f) => {
-      socket.emit("announce", myId);
-
-      manager.subscribe("registered", () => {
-        f(new RemotePlayerController(socket, manager));
-      });
+  connect() {
+    this.manager.subscribe("registered", () => {
+      this.socket.emit("fetchState");
+      this.socket.emit("fetchMaster");
+      this.socket.emit("checkIfMaster");
     });
+
+    this.socket.emit("announce", myId);
   }
 
-  onStateChange(callback?: StateChangeCallback, fetch = true) {
-    this.stateChangeCallback = callback;
+  ready() {
+    this.socket.emit("ready");
+  }
+
+  onStateChange(callback: StateChangeCallback, fetch = true) {
+    this.manager.subscribe("stateChanged", callback);
+
     fetch && this.socket.emit("fetchState");
   }
-
-  // getState(): PlayerState {
-  //   return this.state;
-  // }
 
   sendState(state: PlayerState) {
     this.socket.emit("stateChanged", state);
@@ -68,13 +61,6 @@ export class RemotePlayerController {
     });
   }
 
-  private subscribeToUpdates() {
-    this.manager.subscribe("stateChanged", (state: PlayerState) => {
-      // this.state = state;
-      this.stateChangeCallback && this.stateChangeCallback(state);
-    });
-  }
-
   onDeviceListChange(callback: (devices: Device[]) => void, fetch = true) {
     this.manager.subscribe("deviceListChanged", callback);
 
@@ -85,5 +71,11 @@ export class RemotePlayerController {
     this.manager.subscribe("masterChanged", callback);
 
     fetch && this.socket.emit("fetchMaster");
+  }
+
+  onBecameMaster(callback: (state?: PlayerState) => void, fetch = true) {
+    this.manager.subscribe("nominatedAsMaster", callback);
+
+    fetch && this.socket.emit("checkIfMaster");
   }
 }

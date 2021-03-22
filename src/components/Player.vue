@@ -4,12 +4,12 @@
 
     <player-interface
       v-if="playerState"
-      :name="playerState.song.name"
-      :artist="playerState.song.artist"
+      :name="name"
+      :artist="artist"
+      :cover="cover"
       :is-playing="playerState.isPlaying"
       :duration="playerState.duration"
       :played="playerState.currentPosition"
-      :cover="playerState.song.cover"
       @next="nextSong"
       @prev="prevSong"
       @toggle="toggle"
@@ -38,5 +38,21 @@ export default class Player extends Vue {
   @Action("toggle") toggle;
   @Action("nextSong") nextSong;
   @Action("prevSong") prevSong;
+
+  get cover() {
+    //TODO: rewrite this
+    return (
+      this.playerState?.song?.cover ??
+      "http://www.scottishculture.org/themes/scottishculture/images/music_placeholder.png"
+    );
+  }
+
+  get artist() {
+    return this.playerState?.song?.artist ?? "";
+  }
+
+  get name() {
+    return this.playerState?.song?.name ?? "";
+  }
 }
 </script>

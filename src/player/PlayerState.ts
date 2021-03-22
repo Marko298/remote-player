@@ -1,5 +1,6 @@
 export interface Device {
   id: string;
+  number?: string;
   name: string;
 }
 
@@ -16,7 +17,7 @@ export interface SongMetadata {
 }
 
 export interface PlayerState {
-  song: Song;
+  song?: Song;
   duration: number;
   currentPosition: number;
   isPlaying: boolean;

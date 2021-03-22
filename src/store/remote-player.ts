@@ -8,10 +8,10 @@ interface State {
   player?: RemotePlayerController;
   state?: PlayerState;
   devices: Device[];
-  activeDeviceId: string;
+  activeDeviceId?: string;
 }
 
-const me = { id: myId, name: "Current machine" };
+const me = { id: myId, name: "Current device" };
 
 export function remotePlayerPlugin() {
   return (store) => {
@@ -27,8 +27,8 @@ export const RemotePlayer: Module<State, GlobalState> = {
   state: {
     player: undefined,
     state: undefined,
-    devices: [me],
-    activeDeviceId: me.id,
+    devices: [],
+    activeDeviceId: undefined,
   },
   mutations: {
     SET_PLAYER(state, player: RemotePlayerController) {
@@ -38,7 +38,16 @@ export const RemotePlayer: Module<State, GlobalState> = {
       state.state = playerState;
     },
     SET_REMOTE_DEVICES(state, devices: Device[]) {
-      state.devices = [me, ...devices.filter(({ id }) => id !== me.id)];
+      state.devices = devices
+        .sort((a) => (a.id === me.id ? -1 : 1)) //This device first
+        .map((device) =>
+          device.id !== me.id
+            ? device
+            : {
+                ...device,
+                name: device.name + " (this)", //add (this) to this device name
+              }
+        );
     },
     SET_ACTIVE_DEVICE(state, deviceId: string) {
       state.activeDeviceId = deviceId;
@@ -55,11 +64,11 @@ export const RemotePlayer: Module<State, GlobalState> = {
       return s.state;
     },
     isMaster(state) {
-      return state.activeDeviceId === myId;
+      return !state.activeDeviceId || state.activeDeviceId === myId;
     },
   },
   actions: {
-    setPlayer({ commit, dispatch }, player: RemotePlayerController) {
+    setPlayer({ commit, dispatch, getters }, player: RemotePlayerController) {
       player.onCommand((command, payload) => {
         dispatch(command, payload, { root: true });
       });
@@ -73,12 +82,24 @@ export const RemotePlayer: Module<State, GlobalState> = {
       });
 
       player.onDeviceChange((device) => {
-        if (device?.id === me.id) {
-          dispatch("sendLocalState");
-        }
-
+        const wasMaster = getters.isMaster;
         commit("SET_ACTIVE_DEVICE", device?.id ?? me.id);
+
+        if (wasMaster) {
+          dispatch("localPlayer/pause", {}, { root: true });
+        }
       });
+
+      player.onBecameMaster((playerState) => {
+        commit("SET_ACTIVE_DEVICE", me.id);
+        dispatch("sendLocalState");
+
+        if (playerState) {
+          dispatch("localPlayer/setState", playerState, { root: true });
+        }
+      });
+
+      player.connect();
 
       commit("SET_PLAYER", player);
     },

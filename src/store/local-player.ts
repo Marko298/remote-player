@@ -6,10 +6,10 @@ import { GlobalState } from "@/store/index";
 interface State {
   player?: HTMLAudioElement;
   playlist: Song[];
-  currentSongIndex: number;
+  currentSong?: Song;
   duration: number;
   currentPosition: number;
-  wasPlaying: boolean;
+  startPlayingWhenCan: boolean;
   isPlaying: boolean;
   isReady: boolean;
 }
@@ -19,10 +19,10 @@ export const LocalPlayer: Module<State, GlobalState> = {
   state: {
     player: undefined,
     playlist: playlist,
-    currentSongIndex: 0,
+    currentSong: playlist[0],
     currentPosition: 0,
     duration: 0,
-    wasPlaying: false,
+    startPlayingWhenCan: false,
     isPlaying: false,
     isReady: false,
   },
@@ -30,10 +30,10 @@ export const LocalPlayer: Module<State, GlobalState> = {
     SET_PLAYER(state, player: HTMLAudioElement) {
       state.player = player;
     },
-    SET_SONG_INDEX(state, newIndex: number) {
+    SET_SONG(state, song: Song) {
       state.isReady = false;
-      state.wasPlaying = state.isPlaying;
-      state.currentSongIndex = newIndex;
+      state.startPlayingWhenCan = state.isPlaying;
+      state.currentSong = song;
     },
     SET_POSITION(state, position: number) {
       state.currentPosition = position;
@@ -47,20 +47,26 @@ export const LocalPlayer: Module<State, GlobalState> = {
     SET_DURATION(state, duration: number) {
       state.duration = duration;
     },
+    SET_WAS_PLAYING(state, wasPlaying) {
+      state.startPlayingWhenCan = wasPlaying;
+    },
   },
   getters: {
-    currentSong(state) {
-      return state.playlist[state.currentSongIndex];
+    currentSongIndex(state) {
+      return state.currentSong && state.playlist.indexOf(state.currentSong);
+    },
+    currentSongSource(state) {
+      return state.currentSong?.url;
     },
     player(state) {
       return state.player;
     },
-    state(state, getters): PlayerState {
+    state(state): PlayerState {
       return {
         currentPosition: state.currentPosition,
         isPlaying: state.isPlaying,
         isReady: state.isReady,
-        song: getters.currentSong,
+        song: state.currentSong,
         duration: state.duration,
       };
     },
@@ -69,7 +75,7 @@ export const LocalPlayer: Module<State, GlobalState> = {
     setPlayer({ commit, dispatch }, player) {
       player.onplaying = () => commit("SET_PLAYING", true);
       player.onpause = () => commit("SET_PLAYING", false);
-      player.oncanplay = () => dispatch("ready");
+      player.oncanplay = () => dispatch("canPlay");
       player.onloadedmetadata = (e) => {
         commit("SET_DURATION", e.target.duration);
       };
@@ -84,31 +90,34 @@ export const LocalPlayer: Module<State, GlobalState> = {
       commit("SET_PLAYER", player);
     },
 
-    ready({ state, commit, dispatch }) {
+    ready({ commit }) {
       commit("SET_READY", true);
-      state.wasPlaying && dispatch("play");
     },
 
-    nextSong({ state, commit }) {
-      commit(
-        "SET_SONG_INDEX",
-        state.currentSongIndex === state.playlist.length - 1
+    canPlay({ state, dispatch }) {
+      state.startPlayingWhenCan && dispatch("play");
+    },
+
+    nextSong({ state, commit, getters }) {
+      const newIndex =
+        getters.currentSongIndex === state.playlist.length - 1
           ? 0
-          : state.currentSongIndex + 1
-      );
+          : getters.currentSongIndex + 1;
+
+      commit("SET_SONG", state.playlist[newIndex]);
     },
 
-    prevSong({ state, commit }) {
-      commit(
-        "SET_SONG_INDEX",
-        state.currentSongIndex === 0
+    prevSong({ state, commit, getters }) {
+      const newIndex =
+        getters.currentSongIndex === 0
           ? state.playlist.length - 1
-          : state.currentSongIndex - 1
-      );
+          : getters.currentSongIndex - 1;
+
+      commit("SET_SONG", state.playlist[newIndex]);
     },
 
     play({ getters }) {
-      getters.player.play();
+      return getters.player.play();
     },
 
     pause({ getters }) {
@@ -125,6 +134,15 @@ export const LocalPlayer: Module<State, GlobalState> = {
 
     ended({ dispatch }) {
       dispatch("nextSong");
+    },
+
+    setState({ dispatch, commit }, playerState: PlayerState) {
+      commit("SET_SONG", playerState.song);
+      commit("SET_WAS_PLAYING", playerState.isPlaying);
+
+      if (playerState.currentPosition !== 0) {
+        dispatch("seek", { time: playerState.currentPosition });
+      }
     },
   },
 };

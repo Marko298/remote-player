@@ -22,12 +22,7 @@ export default class ConnectionStatus extends Vue {
       return;
     }
 
-    RemotePlayerController.prepare(this.$socket, this.sockets).then(
-      (player) => {
-        this.setPlayer(player);
-        this.playerCreated = true;
-      }
-    );
+    this.setPlayer(new RemotePlayerController(this.$socket, this.sockets));
   }
 
   mounted() {
