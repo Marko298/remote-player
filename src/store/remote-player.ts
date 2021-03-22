@@ -17,7 +17,10 @@ export function remotePlayerPlugin() {
   return (store) => {
     store.watch(
       (state, getters) => getters["localPlayer/state"],
-      () => store.dispatch("remotePlayer/sendLocalState")
+      () =>
+        store.getters["remotePlayer/player"] &&
+        store.getters["remotePlayer/isMaster"] &&
+        store.dispatch("remotePlayer/sendLocalState")
     );
   };
 }
@@ -81,26 +84,22 @@ export const RemotePlayer: Module<State, GlobalState> = {
         commit("SET_REMOTE_DEVICES", devices);
       });
 
-      player.onDeviceChange((device) => {
+      player.onDeviceChange((masterId, state) => {
         const wasMaster = getters.isMaster;
-        commit("SET_ACTIVE_DEVICE", device?.id ?? me.id);
-
-        if (wasMaster) {
-          dispatch("localPlayer/pause", {}, { root: true });
-        }
+        commit("SET_STATE", state);
+        commit("SET_ACTIVE_DEVICE", masterId);
+        wasMaster && dispatch("pauseLocalPlayer");
       });
 
       player.onBecameMaster((playerState) => {
         commit("SET_ACTIVE_DEVICE", me.id);
-        dispatch("sendLocalState");
 
-        if (playerState) {
-          dispatch("localPlayer/setState", playerState, { root: true });
-        }
+        playerState
+          ? dispatch("applyStateToLocalPlayer", playerState)
+          : dispatch("sendLocalState");
       });
 
       player.connect();
-
       commit("SET_PLAYER", player);
     },
     play({ getters }) {
@@ -112,8 +111,8 @@ export const RemotePlayer: Module<State, GlobalState> = {
     toggle({ getters }) {
       getters.player.command("toggle");
     },
-    seek({ getters }, { time }: { time: number }) {
-      getters.player.command("seek", { time });
+    seek({ getters }, time: number) {
+      getters.player.command("seek", time);
     },
     nextSong({ getters }) {
       getters.player.command("nextSong");
@@ -121,13 +120,19 @@ export const RemotePlayer: Module<State, GlobalState> = {
     prevSong({ getters }) {
       getters.player.command("prevSong");
     },
-    switchToDevice({ getters }, id: string) {
+    switchToDevice({ getters, dispatch }, id: string) {
+      const wasMaster = getters.isMaster;
       getters.player.switchTo(id);
+      wasMaster && dispatch("pauseLocalPlayer");
     },
     sendLocalState({ getters, rootGetters }) {
-      getters.isMaster &&
-        getters.player &&
-        getters.player.sendState(rootGetters["localPlayer/state"]);
+      getters.player.sendState(rootGetters["localPlayer/state"]);
+    },
+    pauseLocalPlayer({ dispatch }) {
+      dispatch("localPlayer/pause", {}, { root: true });
+    },
+    applyStateToLocalPlayer({ dispatch }, playerState: PlayerState) {
+      dispatch("localPlayer/applyState", playerState, { root: true });
     },
   },
 };

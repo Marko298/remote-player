@@ -24,7 +24,7 @@
       </option>
     </select>
 
-    <fieldset class="mt-2" v-else>
+    <fieldset class="mt-2 select-none" v-else>
       <legend class="sr-only">Playing device</legend>
 
       <div class="bg-white rounded-md">

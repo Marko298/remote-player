@@ -29,10 +29,10 @@ export const PlayerControls: Module<undefined, GlobalState> = {
         ? dispatch("localPlayer/toggle")
         : dispatch("remotePlayer/toggle");
     },
-    seek({ dispatch, getters }, payload) {
+    seek({ dispatch, getters }, time: number) {
       getters.isMaster
-        ? dispatch("localPlayer/seek", payload)
-        : dispatch("remotePlayer/seek", payload);
+        ? dispatch("localPlayer/seek", time)
+        : dispatch("remotePlayer/seek", time);
     },
     nextSong({ dispatch, getters }) {
       getters.isMaster

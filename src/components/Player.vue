@@ -13,8 +13,10 @@
       @next="nextSong"
       @prev="prevSong"
       @toggle="toggle"
-      @seek="seek({ time: $event })"
+      @seek="seek"
     />
+
+    <div v-else>Loading player</div>
 
     <local-player />
   </div>

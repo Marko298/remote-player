@@ -12,6 +12,7 @@ interface State {
   startPlayingWhenCan: boolean;
   isPlaying: boolean;
   isReady: boolean;
+  canPlayCallbacks: (() => void)[];
 }
 
 export const LocalPlayer: Module<State, GlobalState> = {
@@ -25,13 +26,13 @@ export const LocalPlayer: Module<State, GlobalState> = {
     startPlayingWhenCan: false,
     isPlaying: false,
     isReady: false,
+    canPlayCallbacks: [],
   },
   mutations: {
     SET_PLAYER(state, player: HTMLAudioElement) {
       state.player = player;
     },
     SET_SONG(state, song: Song) {
-      state.isReady = false;
       state.startPlayingWhenCan = state.isPlaying;
       state.currentSong = song;
     },
@@ -50,20 +51,37 @@ export const LocalPlayer: Module<State, GlobalState> = {
     SET_WAS_PLAYING(state, wasPlaying) {
       state.startPlayingWhenCan = wasPlaying;
     },
+    ADD_CAN_PLAY_CALLBACK(state, callback) {
+      state.canPlayCallbacks.push(callback);
+    },
+    CLEAR_CAN_PLAY_CALLBACKS(state) {
+      state.canPlayCallbacks = [];
+    },
   },
   getters: {
     currentSongIndex(state) {
-      return state.currentSong && state.playlist.indexOf(state.currentSong);
-    },
-    currentSongSource(state) {
-      return state.currentSong?.url;
+      if (!state.currentSong) {
+        console.warn("Song not found. Can't find its index");
+        return;
+      }
+
+      const songInPlaylist = state.playlist.find(
+        (song) => song.id === state.currentSong?.id
+      );
+
+      if (!songInPlaylist) {
+        console.warn("Song not found in playlist");
+        return;
+      }
+
+      return state.playlist.indexOf(songInPlaylist);
     },
     player(state) {
       return state.player;
     },
     state(state): PlayerState {
       return {
-        currentPosition: state.currentPosition,
+        currentPosition: Math.ceil(state.currentPosition),
         isPlaying: state.isPlaying,
         isReady: state.isReady,
         song: state.currentSong,
@@ -94,7 +112,11 @@ export const LocalPlayer: Module<State, GlobalState> = {
       commit("SET_READY", true);
     },
 
-    canPlay({ state, dispatch }) {
+    canPlay({ state, dispatch, commit }) {
+      state.canPlayCallbacks.forEach((callback) => callback());
+
+      commit("CLEAR_CAN_PLAY_CALLBACKS");
+
       state.startPlayingWhenCan && dispatch("play");
     },
 
@@ -128,7 +150,7 @@ export const LocalPlayer: Module<State, GlobalState> = {
       state.isPlaying ? dispatch("pause") : dispatch("play");
     },
 
-    seek({ getters }, { time }: { time: number }) {
+    seek({ getters }, time: number) {
       getters.player.currentTime = time;
     },
 
@@ -136,13 +158,20 @@ export const LocalPlayer: Module<State, GlobalState> = {
       dispatch("nextSong");
     },
 
-    setState({ dispatch, commit }, playerState: PlayerState) {
+    applyState({ dispatch, commit }, playerState: PlayerState) {
       commit("SET_SONG", playerState.song);
-      commit("SET_WAS_PLAYING", playerState.isPlaying);
 
-      if (playerState.currentPosition !== 0) {
-        dispatch("seek", { time: playerState.currentPosition });
-      }
+      dispatch("seek", playerState.currentPosition);
+      playerState.isPlaying && dispatch("play");
+      // if (playerState.currentPosition !== 0) {
+      //   commit("ADD_CAN_PLAY_CALLBACK", () =>
+      //
+      //   );
+      // }
+
+      // if (playerState.isPlaying) {
+      //   commit("ADD_CAN_PLAY_CALLBACK", () => );
+      // }
     },
   },
 };

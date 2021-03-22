@@ -42,7 +42,6 @@ export class RemotePlayerController {
 
   onCommand(callback: CommandCallback) {
     this.socket.subscribe("command", function ({ command, payload }) {
-      console.log(command, payload);
       callback(command, payload);
     });
   }
@@ -60,8 +59,13 @@ export class RemotePlayerController {
     fetch && this.socket.emit("fetchDevices");
   }
 
-  onDeviceChange(callback: (device?: Device) => void, fetch = true) {
-    this.socket.subscribe("masterChanged", callback);
+  onDeviceChange(
+    callback: (master?: string, state?: PlayerState) => void,
+    fetch = true
+  ) {
+    this.socket.subscribe("masterChanged", ({ master, state }) =>
+      callback(master, state)
+    );
 
     fetch && this.socket.emit("fetchMaster");
   }
