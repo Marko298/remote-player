@@ -24,11 +24,6 @@ export interface PlayerState {
   isReady: boolean;
 }
 
-export interface RemotePlayerState extends PlayerState {
-  remoteDevices: Device[];
-  activeDeviceId?: string;
-}
-
 export type RemoteCommand =
   | "play"
   | "pause"
@@ -36,6 +31,7 @@ export type RemoteCommand =
   | "nextSong"
   | "prevSong"
   | "seek";
+
 export type RemoteCommandPayload = Record<string, any>;
 
 export type CommandCallback = (

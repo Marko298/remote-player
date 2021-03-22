@@ -9,9 +9,10 @@
 import { Component, Vue } from "vue-property-decorator";
 import { RemotePlayerController } from "@/player/RemotePlayerController";
 import { Action } from "vuex-class";
+import { Socket } from "@/player/Socket";
 
 @Component({})
-export default class ConnectionStatus extends Vue {
+export default class RemotePlayer extends Vue {
   @Action("remotePlayer/setPlayer") setPlayer;
 
   isConnected = false;
@@ -22,7 +23,9 @@ export default class ConnectionStatus extends Vue {
       return;
     }
 
-    this.setPlayer(new RemotePlayerController(this.$socket, this.sockets));
+    const socket = new Socket(this.$socket, this.sockets);
+
+    this.setPlayer(new RemotePlayerController(socket));
   }
 
   mounted() {

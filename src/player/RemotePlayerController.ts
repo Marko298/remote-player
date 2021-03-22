@@ -1,4 +1,3 @@
-import { Socket } from "socket.io-client";
 import { myId } from "@/id";
 import {
   CommandCallback,
@@ -8,19 +7,13 @@ import {
   RemoteCommandPayload,
   StateChangeCallback,
 } from "@/player/PlayerState";
-
-export interface SocketManager {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  subscribe(eventName: string, handler: (...args: any[]) => void): void;
-
-  unsubscribe(eventName: string): void;
-}
+import { Socket } from "@/player/Socket";
 
 export class RemotePlayerController {
-  constructor(private socket: Socket, private manager: SocketManager) {}
+  constructor(private socket: Socket) {}
 
   connect() {
-    this.manager.subscribe("registered", () => {
+    this.socket.subscribe("registered", () => {
       this.socket.emit("fetchState");
       this.socket.emit("fetchMaster");
       this.socket.emit("checkIfMaster");
@@ -34,7 +27,7 @@ export class RemotePlayerController {
   }
 
   onStateChange(callback: StateChangeCallback, fetch = true) {
-    this.manager.subscribe("stateChanged", callback);
+    this.socket.subscribe("stateChanged", callback);
 
     fetch && this.socket.emit("fetchState");
   }
@@ -48,7 +41,7 @@ export class RemotePlayerController {
   }
 
   onCommand(callback: CommandCallback) {
-    this.manager.subscribe("command", function ({ command, payload }) {
+    this.socket.subscribe("command", function ({ command, payload }) {
       console.log(command, payload);
       callback(command, payload);
     });
@@ -62,19 +55,19 @@ export class RemotePlayerController {
   }
 
   onDeviceListChange(callback: (devices: Device[]) => void, fetch = true) {
-    this.manager.subscribe("deviceListChanged", callback);
+    this.socket.subscribe("deviceListChanged", callback);
 
     fetch && this.socket.emit("fetchDevices");
   }
 
   onDeviceChange(callback: (device?: Device) => void, fetch = true) {
-    this.manager.subscribe("masterChanged", callback);
+    this.socket.subscribe("masterChanged", callback);
 
     fetch && this.socket.emit("fetchMaster");
   }
 
   onBecameMaster(callback: (state?: PlayerState) => void, fetch = true) {
-    this.manager.subscribe("nominatedAsMaster", callback);
+    this.socket.subscribe("nominatedAsMaster", callback);
 
     fetch && this.socket.emit("checkIfMaster");
   }

@@ -23,13 +23,13 @@
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
 import PlayerInterface from "@/components/PlayerInterface.vue";
-import ConnectionStatus from "@/components/ConnectionStatus.vue";
+import RemotePlayer from "@/components/RemotePlayer.vue";
 import LocalPlayer from "@/components/LocalPlayer.vue";
 import { PlayerState } from "@/player/PlayerState";
 import { Action, Getter } from "vuex-class";
 
 @Component({
-  components: { LocalPlayer, ConnectionStatus, PlayerInterface },
+  components: { LocalPlayer, ConnectionStatus: RemotePlayer, PlayerInterface },
 })
 export default class Player extends Vue {
   @Getter("playerState") playerState?: PlayerState;
