@@ -12,7 +12,6 @@ interface State {
   startPlayingWhenCan: boolean;
   isPlaying: boolean;
   isReady: boolean;
-  canPlayCallbacks: (() => void)[];
 }
 
 export const LocalPlayer: Module<State, GlobalState> = {
@@ -26,7 +25,6 @@ export const LocalPlayer: Module<State, GlobalState> = {
     startPlayingWhenCan: false,
     isPlaying: false,
     isReady: false,
-    canPlayCallbacks: [],
   },
   mutations: {
     SET_PLAYER(state, player: HTMLAudioElement) {
@@ -50,12 +48,6 @@ export const LocalPlayer: Module<State, GlobalState> = {
     },
     SET_WAS_PLAYING(state, wasPlaying) {
       state.startPlayingWhenCan = wasPlaying;
-    },
-    ADD_CAN_PLAY_CALLBACK(state, callback) {
-      state.canPlayCallbacks.push(callback);
-    },
-    CLEAR_CAN_PLAY_CALLBACKS(state) {
-      state.canPlayCallbacks = [];
     },
   },
   getters: {
@@ -110,9 +102,6 @@ export const LocalPlayer: Module<State, GlobalState> = {
     },
 
     canPlay({ state, dispatch }) {
-      // state.canPlayCallbacks.forEach((callback) => callback());
-      // commit("CLEAR_CAN_PLAY_CALLBACKS");
-
       state.startPlayingWhenCan && dispatch("play");
     },
 
