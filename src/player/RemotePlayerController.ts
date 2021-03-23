@@ -1,35 +1,36 @@
 import { myId } from "@/id";
 import {
+  BecameMasterCallback,
   CommandCallback,
   Device,
+  DeviceListChangeCallback,
+  InitialState,
+  MasterChangeCallback,
   PlayerState,
   RemoteCommand,
   RemoteCommandPayload,
   StateChangeCallback,
-} from "@/player/PlayerState";
+} from "@/player/RemotePlayer";
 import { Socket } from "@/player/Socket";
 
 export class RemotePlayerController {
   constructor(private socket: Socket) {}
 
-  connect() {
-    this.socket.subscribe("registered", () => {
-      this.socket.emit("fetchState");
-      this.socket.emit("fetchMaster");
-      this.socket.emit("checkIfMaster");
+  connect(): Promise<InitialState> {
+    return new Promise((f) => {
+      this.socket.subscribe("registered", ([devices, master, state]) =>
+        f({
+          devices,
+          master,
+          state,
+        })
+      );
+      this.socket.emit("announce", myId);
     });
-
-    this.socket.emit("announce", myId);
   }
 
   ready() {
     this.socket.emit("ready");
-  }
-
-  onStateChange(callback: StateChangeCallback, fetch = true) {
-    this.socket.subscribe("stateChanged", callback);
-
-    fetch && this.socket.emit("fetchState");
   }
 
   sendState(state: PlayerState) {
@@ -40,39 +41,35 @@ export class RemotePlayerController {
     this.socket.emit("switchMaster", id);
   }
 
-  onCommand(callback: CommandCallback) {
-    this.socket.subscribe("command", function ({ command, payload }) {
-      callback(command, payload);
-    });
+  confirmBecameMaster(state: PlayerState) {
+    this.socket.emit("confirmMasterSwitch", state);
   }
 
   command(command: RemoteCommand, payload: RemoteCommandPayload = {}) {
-    this.socket.emit("command", {
-      command,
-      payload,
-    });
+    this.socket.emit("command", command, payload);
   }
 
-  onDeviceListChange(callback: (devices: Device[]) => void, fetch = true) {
+  onStateChange(callback: StateChangeCallback) {
+    this.socket.subscribe("stateChanged", callback);
+  }
+
+  onCommand(callback: CommandCallback) {
+    this.socket.subscribe("command", ([command, payload]) =>
+      callback(command, payload)
+    );
+  }
+
+  onDeviceListChange(callback: DeviceListChangeCallback) {
     this.socket.subscribe("deviceListChanged", callback);
-
-    fetch && this.socket.emit("fetchDevices");
   }
 
-  onDeviceChange(
-    callback: (master?: string, state?: PlayerState) => void,
-    fetch = true
-  ) {
-    this.socket.subscribe("masterChanged", ({ master, state }) =>
+  onMasterChange(callback: MasterChangeCallback) {
+    this.socket.subscribe("masterChanged", ([master, state]) =>
       callback(master, state)
     );
-
-    fetch && this.socket.emit("fetchMaster");
   }
 
-  onBecameMaster(callback: (state?: PlayerState) => void, fetch = true) {
+  onBecameMaster(callback: BecameMasterCallback) {
     this.socket.subscribe("nominatedAsMaster", callback);
-
-    fetch && this.socket.emit("checkIfMaster");
   }
 }

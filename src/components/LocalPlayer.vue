@@ -3,14 +3,15 @@
 </template>
 
 <script>
-import { mapActions } from "vuex";
+import { mapActions, mapState } from "vuex";
 
 export default {
   name: "LocalPlayer",
   methods: mapActions("localPlayer", ["setPlayer", "ready"]),
   computed: {
+    ...mapState("localPlayer", ["currentSong"]),
     source() {
-      return this.$store.state.localPlayer.currentSong?.url;
+      return this.currentSong?.url;
     },
   },
   mounted() {

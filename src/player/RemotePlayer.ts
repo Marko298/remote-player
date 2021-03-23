@@ -1,7 +1,7 @@
 export interface Device {
   id: string;
-  number?: string;
   name: string;
+  ready: boolean;
 }
 
 export interface Song {
@@ -12,16 +12,18 @@ export interface Song {
   cover: string;
 }
 
-export interface SongMetadata {
-  duration: number;
-}
-
 export interface PlayerState {
   song?: Song;
   duration: number;
   currentPosition: number;
   isPlaying: boolean;
   isReady: boolean;
+}
+
+export interface InitialState {
+  master?: string;
+  state?: PlayerState;
+  devices: Device[];
 }
 
 export type RemoteCommand =
@@ -32,7 +34,7 @@ export type RemoteCommand =
   | "prevSong"
   | "seek";
 
-export type RemoteCommandPayload = Record<string, any>;
+export type RemoteCommandPayload = unknown;
 
 export type CommandCallback = (
   command: RemoteCommand,
@@ -40,3 +42,9 @@ export type CommandCallback = (
 ) => void;
 
 export type StateChangeCallback = (state: PlayerState) => void;
+export type DeviceListChangeCallback = (devices: Device[]) => void;
+export type BecameMasterCallback = (state?: PlayerState) => void;
+export type MasterChangeCallback = (
+  master?: string,
+  state?: PlayerState
+) => void;

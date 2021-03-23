@@ -1,7 +1,7 @@
 <template>
   <div
-    class="container mt-8 mx-auto bg-white shadow-2xl rounded-lg p-4"
-    v-if="devices.length > 1"
+    v-if="devices && devices.length > 1"
+    class="container mt-8 mx-auto bg-white shadow-2xl rounded-lg p-4 select-none"
   >
     <label class="block text-sm font-medium text-gray-700" for="device">
       Play from
@@ -17,6 +17,7 @@
       <option
         v-for="device in devices"
         :key="device.id"
+        :disabled="!device.ready"
         :selected="device.id === activeDeviceId"
         :value="device.id"
       >
@@ -24,7 +25,7 @@
       </option>
     </select>
 
-    <fieldset class="mt-2 select-none" v-else>
+    <fieldset v-else class="mt-2">
       <legend class="sr-only">Playing device</legend>
 
       <div class="bg-white rounded-md">
@@ -36,36 +37,57 @@
         >
           <div class="flex items-center h-5">
             <input
-              @click="switchToDevice(device.id)"
               :id="`device-selector-${device.id}`"
               :checked="device.id === activeDeviceId"
-              class="focus:ring-0 h-4 w-4 text-orange cursor-pointer border-gray-300"
+              :class="{ 'cursor-pointer': device.ready }"
+              :disabled="!device.ready"
+              class="focus:ring-0 h-4 w-4 text-orange border-gray-300"
               name="device-selector"
               type="radio"
+              @click="switchToDevice(device.id)"
             />
           </div>
           <label
-            class="ml-3 flex flex-col cursor-pointer"
+            :class="{ 'cursor-pointer': device.ready }"
             :for="`device-selector-${device.id}`"
+            class="ml-3 flex flex-col"
           >
-            <span class="block text-sm font-medium text-gray-900">
+            <span
+              :class="{
+                'text-gray-900': device.ready,
+                'text-gray-400': !device.ready,
+              }"
+              class="block text-sm font-medium"
+            >
               {{ device.name }}
             </span>
           </label>
         </div>
       </div>
     </fieldset>
+
+    <span class="text-gray-500 text-sm font-medium" v-if="!isLocalReady">
+      Hint: Tap anywhere to activate this device
+    </span>
   </div>
 </template>
 
 <script lang="ts">
-import { mapActions, mapState } from "vuex";
+import { Component, Vue } from "vue-property-decorator";
+import { Device } from "@/player/RemotePlayer";
+import { namespace } from "vuex-class";
 
-export default {
-  name: "DeviceSelector",
-  computed: mapState("remotePlayer", ["devices", "activeDeviceId"]),
-  methods: mapActions("remotePlayer", ["switchToDevice"]),
-};
+const remotePlayer = namespace("remotePlayer");
+const localPlayer = namespace("localPlayer");
+
+@Component({})
+export default class DeviceSelector extends Vue {
+  @remotePlayer.Action("switchToDevice") switchToDevice!: (id: string) => void;
+  @remotePlayer.State("devices") devices: Device[];
+  @remotePlayer.State("activeDeviceId") activeDeviceId?: string;
+
+  @localPlayer.State("isReady") isLocalReady: boolean;
+}
 </script>
 
 <style>

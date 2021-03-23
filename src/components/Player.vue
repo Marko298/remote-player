@@ -1,6 +1,7 @@
 <template>
   <div class="relative">
-    <connection-status />
+    <remote-player />
+    <local-player />
 
     <player-interface
       v-if="playerState"
@@ -17,21 +18,19 @@
     />
 
     <div v-else>Loading player</div>
-
-    <local-player />
   </div>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
 import PlayerInterface from "@/components/PlayerInterface.vue";
-import RemotePlayer from "@/components/RemotePlayer.vue";
 import LocalPlayer from "@/components/LocalPlayer.vue";
-import { PlayerState } from "@/player/PlayerState";
+import RemotePlayer from "@/components/RemotePlayer.vue";
+import { PlayerState } from "@/player/RemotePlayer";
 import { Action, Getter } from "vuex-class";
 
 @Component({
-  components: { LocalPlayer, ConnectionStatus: RemotePlayer, PlayerInterface },
+  components: { LocalPlayer, RemotePlayer, PlayerInterface },
 })
 export default class Player extends Vue {
   @Getter("playerState") playerState?: PlayerState;

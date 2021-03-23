@@ -1,4 +1,4 @@
-import { PlayerState, Song } from "@/player/PlayerState";
+import { PlayerState, Song } from "@/player/RemotePlayer";
 import playlist from "@/playlist";
 import { Module } from "vuex";
 import { GlobalState } from "@/store/index";
@@ -60,18 +60,12 @@ export const LocalPlayer: Module<State, GlobalState> = {
   },
   getters: {
     currentSongIndex(state) {
-      if (!state.currentSong) {
-        console.warn("Song not found. Can't find its index");
-        return;
-      }
-
       const songInPlaylist = state.playlist.find(
-        (song) => song.id === state.currentSong?.id
+        ({ id }) => id === state.currentSong?.id
       );
 
       if (!songInPlaylist) {
-        console.warn("Song not found in playlist");
-        return;
+        return console.warn("Song not found in playlist");
       }
 
       return state.playlist.indexOf(songInPlaylist);
@@ -79,9 +73,12 @@ export const LocalPlayer: Module<State, GlobalState> = {
     player(state) {
       return state.player;
     },
+    isReady(state) {
+      return state.isReady;
+    },
     state(state): PlayerState {
       return {
-        currentPosition: Math.ceil(state.currentPosition),
+        currentPosition: state.currentPosition,
         isPlaying: state.isPlaying,
         isReady: state.isReady,
         song: state.currentSong,
@@ -112,10 +109,9 @@ export const LocalPlayer: Module<State, GlobalState> = {
       commit("SET_READY", true);
     },
 
-    canPlay({ state, dispatch, commit }) {
-      state.canPlayCallbacks.forEach((callback) => callback());
-
-      commit("CLEAR_CAN_PLAY_CALLBACKS");
+    canPlay({ state, dispatch }) {
+      // state.canPlayCallbacks.forEach((callback) => callback());
+      // commit("CLEAR_CAN_PLAY_CALLBACKS");
 
       state.startPlayingWhenCan && dispatch("play");
     },
@@ -158,20 +154,10 @@ export const LocalPlayer: Module<State, GlobalState> = {
       dispatch("nextSong");
     },
 
-    applyState({ dispatch, commit }, playerState: PlayerState) {
+    async applyState({ dispatch, commit }, playerState: PlayerState) {
       commit("SET_SONG", playerState.song);
-
+      commit("SET_WAS_PLAYING", playerState.isPlaying);
       dispatch("seek", playerState.currentPosition);
-      playerState.isPlaying && dispatch("play");
-      // if (playerState.currentPosition !== 0) {
-      //   commit("ADD_CAN_PLAY_CALLBACK", () =>
-      //
-      //   );
-      // }
-
-      // if (playerState.isPlaying) {
-      //   commit("ADD_CAN_PLAY_CALLBACK", () => );
-      // }
     },
   },
 };
